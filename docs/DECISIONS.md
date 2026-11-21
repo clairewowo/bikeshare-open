@@ -3,6 +3,7 @@
 One line per methodological decision: what you chose, why, and what it changed.
 Agents append here via the `/new-feature` skill; you append here by hand.
 
+- The agent did not see that 2011-03-10 was missing and identify casual and registered as leakage
 - Exclude `casual`, `registered`: they sum to `cnt` exactly. Leaky model R^2 1.000 -> honest ridge 0.583.
 - Exclude `cnt_2d_bfr`: a shipped 2-day lag we cannot test the alignment of. Build our own lags instead.
 - Exclude `instant`, `yr`, `days_since_2011`: time indexes let a tree predict a flat constant past 2011 and a linear model extrapolate a trend we have no grounds for.
