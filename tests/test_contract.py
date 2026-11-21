@@ -3,7 +3,7 @@ import pandas as pd
 import pytest
 from sklearn.metrics import r2_score
 
-from src.config import LAG_WARMUP, TARGET
+from src.config import FORBIDDEN, LAG_WARMUP, RAW_FEATURE_INPUTS, RAW_METADATA_COLS, TARGET
 from src.features import build_features, feature_columns, reindex_to_calendar
 from src.ingest import load_raw
 from src.train import MODELS, temporal_split
@@ -23,6 +23,12 @@ def test_calendar_is_complete_before_lagging(raw):
     """The reindexed frame must have no gaps, or the lags are wrong."""
     grid = reindex_to_calendar(raw)
     assert set(grid.dteday.diff().dropna().dt.days.unique()) == {1}
+
+
+def test_all_raw_columns_are_classified(raw):
+    known = FORBIDDEN | RAW_FEATURE_INPUTS | RAW_METADATA_COLS | {"dteday"}
+    unknown = set(raw.columns) - known
+    assert not unknown, f"unclassified raw columns: {sorted(unknown)}"
 
 
 def test_only_expected_rows_are_dropped(raw, feats):
