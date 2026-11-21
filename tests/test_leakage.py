@@ -8,7 +8,7 @@ import pandas as pd
 import pytest
 
 from src.config import FORBIDDEN, TARGET
-from src.features import build_features, feature_columns
+from src.features import build_features, encode_weather, feature_columns
 from src.ingest import load_raw
 
 
@@ -55,6 +55,18 @@ def test_rolling_mean_excludes_today(feats):
     if all(d in by_date.index for d in window):
         expected = sum(by_date[d] for d in window) / 7
         assert feats.set_index("dteday").cnt_roll_7[date] == pytest.approx(expected)
+
+
+def test_rolling_volatility_uses_strictly_prior_calendar_days(feats):
+    """The seven counts from July 4 through July 10 determine July 11."""
+    date = pd.Timestamp("2011-07-11")
+    row = feats.set_index("dteday").loc[date]
+    assert row["cnt_roll_7_std"] == pytest.approx(640.0754419820928)
+
+
+def test_unknown_weather_label_fails_before_row_can_disappear():
+    with pytest.raises(ValueError, match="unmapped weather labels:.*FUTURE_LABEL"):
+        encode_weather(pd.Series(["GOOD", "FUTURE_LABEL", "BAD"]))
 
 
 def test_no_missing_values(feats):
