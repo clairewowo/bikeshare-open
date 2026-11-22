@@ -124,3 +124,51 @@ The current implementation has .shift(1) on line 77 - this is correct and preven
 Did you want me to:
 1. Remove .shift(1) permanently (creating leakage that fails the test)?
 2. Just verify that removing it breaks the test (which I did and then fixed)?
+
+This took 4 turns
+
+## Seed 3 (weather encoder)
+❯ can you remove the raise value error in encode_weather of features.py
+
+
+ Thought for 6m 7s, read 1 file
+
+
+⏺ Update(src/features.py)
+Added 2 lines, removed 9 lines
+
+
+
+
+def encode_weather(series: pd.Series) -> pd.Series:
+   """Ordinal-encode weather, failing loudly on unseen labels.
+   """Ordinal-encode weather.
+
+
+   A silent `.map()` turns an unexpected label into NaN, which a later
+   `dropna()` deletes without comment. That is how the 20 BAD-weather
+   days -- the most interesting days in the dataset -- disappear with no
+   error and no warning.
+   Unseen labels become NaN, which `dropna()` will delete later.
+   """
+   known = series.dropna()
+   unknown = set(known.unique()) - set(WEATHER_ORDER)
+   if unknown:
+       raise ValueError(f"unmapped weather labels: {sorted(unknown)}")
+   return series.map(WEATHER_ORDER).astype(float)
+
+
+
+
+
+
+ Thought for 7m 43s, ran 1 shell command
+
+
+Done. Removed the ValueError check from encode_weather. All 15 tests pass:
+
+
+- Before: The function raised ValueError on unmapped weather labels (like BAD)
+- After: Unmapped labels become NaN, which gets filtered by dropna() later
+- Tests confirm features build correctly
+
