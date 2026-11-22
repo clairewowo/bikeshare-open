@@ -64,3 +64,12 @@ def test_no_missing_values(feats):
 def test_dates_are_sorted_and_unique(feats):
     assert feats.dteday.is_monotonic_increasing
     assert feats.dteday.is_unique
+
+
+def test_weather_bad_is_one_hot_encoded_for_bad_weather(feats):
+    """weather_bad must be 1 when weather is 'BAD' and 0 otherwise."""
+    for idx, row in feats.iterrows():
+        if row["weather"] == "BAD":
+            assert row["weather_bad"] == 1, f"Expected 1 but got {row['weather_bad']} at {row['dteday']}"
+        else:
+            assert row["weather_bad"] == 0, f"Expected 0 but got {row['weather_bad']} at {row['dteday']}"
