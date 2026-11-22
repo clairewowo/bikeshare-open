@@ -56,3 +56,17 @@ def test_persistence_baseline_is_reported():
     """The baseline that matters for a lag-driven model is 'yesterday again'.
     It must be in the comparison, whatever its score."""
     assert "baseline_persistence" in MODELS
+
+
+import hashlib
+from pathlib import Path
+RAW_CSV = Path(__file__).resolve().parents[1] / "data" / "raw" / "bike_daily.csv"
+
+sha256_prefix = "a6bed1577f6e4de5"  # from the assignment page
+def test_raw_data_is_unmodified():
+    """Raw data is immutable. A cp from Bash bypasses the Edit/Write deny
+    rules and the PostToolUse hook, so verify the file itself."""
+    digest = hashlib.sha256(RAW_CSV.read_bytes()).hexdigest()
+    assert digest.startswith(sha256_prefix), (
+        f"data/raw/bike_daily.csv changed: sha256 is {digest[:16]}..."
+    )
