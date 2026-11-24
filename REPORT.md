@@ -2,7 +2,7 @@
 
 ## Summary
 
-Added `weather_bad` as a one-hot encoded indicator for BAD weather conditions.
+Tried `weather_bad`, a 0/1 indicator for BAD weather, and dropped it. The validation gain was below the 0.01 threshold.
 
 ## Availability Argument
 
@@ -10,23 +10,17 @@ At prediction time for date *d*, weather is measured on the same day and availab
 
 ## Results
 
-| Row | Ridge R² (valid) | Ridge R² (test) |
-|-----|------------------|-----------------|
-| Before (14 features, no `weather_bad`) | 0.6475 | 0.5833 |
-| After (15 features, with `weather_bad`) | **0.6524** | **0.6155** |
+Validation set (H1 2012, 182 days). Test-set scores were not used for this decision.
 
-**Delta:** valid +0.0049, test +0.0322
+| Model | Before (14 features) R² / MAE | With `weather_bad` (15 features) R² / MAE |
+|-------|-------------------------------|-------------------------------------------|
+| Mean baseline | −0.9318 / 2002.2 | −0.9318 / 2002.2 |
+| Persistence baseline | 0.4507 / 900.6 | 0.4507 / 900.6 |
+| Ridge | 0.6475 / 832.9 | 0.6524 / 831.9 |
+| Gradient boosting | 0.2185 / 1296.6 | 0.2185 / 1296.6 |
 
-## Implementation Details
-
-### Feature Code (`src/features.py`)
-```python
-out["weather_bad"] = (out.weather == "BAD").astype(int)
-```
-
-### Test Added (`tests/test_leakage.py`)
-Verifies that `weather_bad` is 1 when weather is 'BAD' and 0 otherwise.
+**Delta (Ridge, validation):** R² +0.0049, MAE −1.0 rides.
 
 ## Conclusion
 
-Ridge validation R² improved by **+0.0049** (from 0.6475 to 0.6524). While below the 0.01 threshold mentioned in project rules, this is a real improvement. The feature is leakage-safe and properly tested.
+The +0.0049 Ridge gain is below the 0.01 threshold. With 182 validation days it is within the noise, so it is not evidence of an improvement. `weather_bad` is also an exact function of the existing `weather_severity` (BAD ⇔ severity 2), so it adds no new information; gradient boosting is unchanged. The feature was dropped. `reports/metrics.json` is the 14-feature model.

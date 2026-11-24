@@ -61,13 +61,13 @@ def test_no_missing_values(feats):
     assert feats[feature_columns(feats)].isna().sum().sum() == 0
 
 
-def test_weather_bad_is_one_hot_encoded_for_bad_weather(feats):
-    """weather_bad must be 1 when weather is 'BAD' and 0 otherwise."""
-    for idx, row in feats.iterrows():
-        if row["weather"] == "BAD":
-            assert row["weather_bad"] == 1, f"Expected 1 but got {row['weather_bad']} at {row['dteday']}"
-        else:
-            assert row["weather_bad"] == 0, f"Expected 0 but got {row['weather_bad']} at {row['dteday']}"
+def test_unknown_weather_label_raises():
+    """Seeded fault 3: a silent .map() turns an unknown label into NaN and
+    dropna() deletes the row. The encoder must refuse instead."""
+    raw = load_raw()
+    raw.loc[raw.index[100], "weather"] = "SNOW"
+    with pytest.raises(ValueError, match="unmapped weather labels"):
+        build_features(raw)
 
 
 def test_dates_are_sorted_and_unique(feats):

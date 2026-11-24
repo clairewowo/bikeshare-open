@@ -17,10 +17,17 @@ WEATHER_ORDER = {"GOOD": 0, "MISTY": 1, "BAD": 2}
 
 
 def encode_weather(series: pd.Series) -> pd.Series:
+    """Ordinal-encode weather, failing loudly on unseen labels.
+
+    A silent `.map()` turns an unexpected label into NaN, which a later
+    `dropna()` deletes without comment. That is how the 20 BAD-weather
+    days -- the most interesting days in the dataset -- disappear with no
+    error and no warning.
     """
-    Ordinal-encode weather
-    Unseen labels become NaN, which `dropna()` will delete later.
-    """
+    known = series.dropna()
+    unknown = set(known.unique()) - set(WEATHER_ORDER)
+    if unknown:
+        raise ValueError(f"unmapped weather labels: {sorted(unknown)}")
     return series.map(WEATHER_ORDER).astype(float)
 
 
@@ -60,7 +67,6 @@ def build_features(df: pd.DataFrame) -> pd.DataFrame:
 
     # --- Weather: measured same-day, available to a forecaster ----------
     out["weather_severity"] = encode_weather(out.weather)
-    out["weather_bad"] = (out.weather == "BAD").astype(int)
 
     # --- Lagged target: past values only. shift(1) is the whole ballgame;
     # without it, cnt_roll_7 would contain today's count. -----------------
