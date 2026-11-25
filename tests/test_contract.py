@@ -58,6 +58,16 @@ def test_persistence_baseline_is_reported():
     assert "baseline_persistence" in MODELS
 
 
+def test_all_raw_columns_are_classified(raw):
+    """Every raw column must be forbidden, a feature input, metadata, or the
+    date. A column appended to the CSV must not enter the model silently."""
+    from src.config import FORBIDDEN, RAW_FEATURE_INPUTS, RAW_METADATA_COLS
+
+    known = FORBIDDEN | RAW_FEATURE_INPUTS | RAW_METADATA_COLS | {"dteday"}
+    unknown = set(raw.columns) - known
+    assert not unknown, f"unclassified raw columns: {sorted(unknown)}"
+
+
 def test_target_transforms_are_off_by_default_and_past_only():
     """Exercise 4: the committed metrics come from the untransformed target,
     and any transform anchor is an audited, past-only feature column."""

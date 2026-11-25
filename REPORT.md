@@ -1,29 +1,34 @@
 # Report
 
-## Results (Exercise 1)
+## Results
 
-Tried `weather_bad`, a 0/1 indicator for BAD weather, and dropped it. The validation gain was below the 0.01 threshold.
+Temporal split: train 2011 (348 days), validation H1 2012 (182 days), test H2 2012 (184 days). "Before" is the committed pipeline (`reports/metrics.json`, 14 features). "After" adds my Exercise 1 feature `weather_bad` (15 features; numbers from `make all` at commit `aeed231`). Test scores are reported here once and were not used to choose features.
 
-### Availability Argument
+| Model | Feature set | Valid R² | Valid MAE | Test R² | Test MAE |
+|---|---|---:|---:|---:|---:|
+| baseline_mean | Before | -0.9318 | 2002.2 | -2.1441 | 2847.7 |
+| baseline_persistence | Before | 0.4507 | 900.6 | 0.5099 | 840.1 |
+| ridge | Before | 0.6475 | 832.9 | 0.5833 | 947.1 |
+| hgb | Before | 0.2185 | 1296.6 | -0.4975 | 1972.6 |
+| baseline_mean | After | -0.9318 | 2002.2 | -2.1441 | 2847.7 |
+| baseline_persistence | After | 0.4507 | 900.6 | 0.5099 | 840.1 |
+| ridge | After | 0.6524 | 831.9 | 0.6155 | 905.2 |
+| hgb | After | 0.2185 | 1296.6 | -0.4975 | 1972.6 |
 
-At prediction time for date *d*, weather is measured on the same day and available to a forecaster before making their prediction. This is not leakage.
+**Feature (Exercise 1): `weather_bad`**, a 0/1 indicator for BAD weather.
+- *Availability argument:* weather on day *d* is measured the same day and is available to a forecaster at prediction time, so this is not leakage.
+- *Validation delta:* Ridge R² +0.0049 (0.6475 → 0.6524), MAE −1.0 rides. Gradient boosting is unchanged, because `weather_bad` is an exact function of the existing `weather_severity` (BAD ⇔ severity 2).
+- *Decision:* dropped. The gain is below the 0.01 threshold, and with 182 validation days it is within the noise.
+- *Caveat:* an earlier version of this report (commit `5ce03e4`) also showed the feature's test-set R². The decision rests on validation alone; see `docs/DECISIONS.md`.
 
-### Results
+## Headline finding
 
-Validation set (H1 2012, 182 days). Test-set scores were not used for this decision.
+A model given `casual` and `registered` scores R² 1.000, and that score is invalid: those two columns sum to `cnt` exactly. Under a temporal split (train 2011, test H2 2012):
+- The mean baseline scores test R² -2.1441, because ridership grew and the 2011 average no longer describes 2012.
+- Ridge reaches 0.5833 against a persistence ("yesterday's count") baseline of 0.5099. It beats persistence by 0.07 R² but loses to it on MAE (947.1 vs 840.1 rides).
+- Gradient boosting is negative (-0.4975, MAE 1972.6) because a tree cannot predict counts above the range it saw in 2011, but it still beats the mean baseline by 1.65 R².
 
-| Model | Before (14 features) R² / MAE | With `weather_bad` (15 features) R² / MAE |
-|-------|-------------------------------|-------------------------------------------|
-| Mean baseline | −0.9318 / 2002.2 | −0.9318 / 2002.2 |
-| Persistence baseline | 0.4507 / 900.6 | 0.4507 / 900.6 |
-| Ridge | 0.6475 / 832.9 | 0.6524 / 831.9 |
-| Gradient boosting | 0.2185 / 1296.6 | 0.2185 / 1296.6 |
-
-**Delta (Ridge, validation):** R² +0.0049, MAE −1.0 rides.
-
-### Conclusion
-
-The +0.0049 Ridge gain is below the 0.01 threshold. With 182 validation days it is within the noise, so it is not evidence of an improvement. `weather_bad` is also an exact function of the existing `weather_severity` (BAD ⇔ severity 2), so it adds no new information; gradient boosting is unchanged. The feature was dropped. `reports/metrics.json` is the 14-feature model.
+So the honest result is that Ridge only narrowly beats persistence, and gradient boosting fails to extrapolate a growing trend. My feature, `weather_bad`, raised Ridge's validation R² by only 0.0049 and left gradient boosting unchanged, so I did not keep it.
 
 ## Exercise 4: target transformation
 
@@ -67,7 +72,15 @@ Persistence baseline, validation: 0.4507 / 900.6.
 `reports/metrics.json` remains the untransformed pipeline; the transform is behind a flag that defaults to off.
 
 ## Exercise 5: Ridge vs Persistence
-Ridge is not worth deploying over "yesterday again" because the 0.07 advantage in R2 is driven by outliers (squaring an error weights large errors heavier). Ridge also consistently underestimates in 2011 (about −500 rides/ day). It is a more complex model as well and the pipeline is not worth the improvement. 
+
+Ridge is not worth deploying over "yesterday again". On test it beats persistence by 0.07 R² (0.5833 vs 0.5099) but is 107 rides/day worse on MAE (947.1 vs 840.1). R² squares errors, so Ridge's edge comes from a few large misses. On validation, Ridge misses by more than 2,000 rides on 7 days against persistence's 18, and its worst day is 3,536 off vs 5,597. On ordinary days persistence is closer: median absolute error 639 vs 726 on validation, and Ridge is closer on only 86 of 182 validation days. Ridge also under-predicts by about 500 rides/day on the H1 2012 validation set, because it learned 2011 levels. Its MAE advantage on validation (832.9 vs 900.6) reversed on test, which is consistent with, though not proof of, that bias growing further from 2011. For a 14-feature pipeline that loses to a one-line rule on the everyday metric, the improvement is not worth it. The case would change if large misses cost much more than small ones.
 
 ## Attribution
-I used the 16 GB ollama model for the first 2 exercises and after exercise 3, used the NRP hosted version of Qwen
+
+Model: qwen3.5:9b via Ollama (built as `bikeshare-coder`, 64k context) for Exercises 1–2. I then switched to Claude Code with Claude Opus 5.5 (hosted) for Exercises 3–5 and the final fixes, because I was running out of time.
+
+**Decisions that were mine** (each has a line in `docs/DECISIONS.md`)
+- Keep the starter's choices on what to predict, what counts as leakage, how to split, and which baselines to report.
+- Add `weather_bad`, then drop it as below the 0.01 threshold.
+- Accept the Exercise 4 transform `cnt − cnt_roll_7`. It was proposed by the agent; I judged it only partly defensible.
+- Judge that Ridge is not worth deploying over persistence (Exercise 5).

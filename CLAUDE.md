@@ -9,6 +9,9 @@ rides) from calendar, weather, and lagged-demand features.
 - `make train` - fit models, write `reports/metrics.json`
 - `make test` - pytest; run this before claiming anything works
 - `make all` - the three pipeline stages in order
+- `/run-pipeline [transform]` - skill: test, run, and compare models vs persistence
+- `python -m src.train --target-transform diff_roll7 --valid-only` -
+  Exercise 4 transform; never overwrites `reports/metrics.json`
 
 ## Non-negotiable rules
 - **Never** put `casual` or `registered` in a feature set:
@@ -17,6 +20,9 @@ rides) from calendar, weather, and lagged-demand features.
   for each. Derive feature lists from `FORBIDDEN`; never hand-type them.
 - **Never** split this data randomly. Use `src.train.temporal_split`.
   Train = 2011, valid = H1 2012, test = H2 2012. Never tune on test.
+  While iterating, use `--valid-only`; `make train` also scores test.
+- Classify any new raw column in `src/config.py` (FORBIDDEN, RAW_FEATURE_INPUTS
+  or RAW_METADATA_COLS) before using it; `make test` fails otherwise.
 - Any new lag or rolling feature must be built on a gap-free calendar
   index (`src.features.reindex_to_calendar`) and must `.shift(1)` before
   it aggregates. Add a test for it in `tests/test_leakage.py`.
