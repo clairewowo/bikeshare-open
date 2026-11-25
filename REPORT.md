@@ -1,33 +1,6 @@
 # Report
 
-## Model usage
-I used the 16 GB ollama model for the first 2 exercises and after exercise 3, used the NRP hosted version of Qwen
-
-## Results
-
-Temporal split: train 2011 (348 days), validation H1 2012 (182 days), test H2 2012 (184 days). "Before" is the committed pipeline (`reports/metrics.json`, 14 features). "After" adds `weather_bad` (15 features). Test scores are reported here once and were not used to choose features.
-
-| Model | Feature set | Valid R² | Valid MAE | Test R² | Test MAE |
-|---|---|---:|---:|---:|---:|
-| baseline_mean | Before | -0.9318 | 2002.2 | -2.1441 | 2847.7 |
-| baseline_persistence | Before | 0.4507 | 900.6 | 0.5099 | 840.1 |
-| ridge | Before | 0.6475 | 832.9 | 0.5833 | 947.1 |
-| hgb | Before | 0.2185 | 1296.6 | -0.4975 | 1972.6 |
-| baseline_mean | After | -0.9318 | 2002.2 | -2.1441 | 2847.7 |
-| baseline_persistence | After | 0.4507 | 900.6 | 0.5099 | 840.1 |
-| ridge | After | 0.6524 | 831.9 | 0.6155 | 905.2 |
-| hgb | After | 0.2185 | 1296.6 | -0.4975 | 1972.6 |
-
-## Headline finding
-
-A model given `casual` and `registered` scores R² 1.000, and that score is invalid: those two columns sum to `cnt` exactly. Under a temporal split (train 2011, test H2 2012):
-- The mean baseline scores test R² -2.1441, because ridership grew and the 2011 average no longer describes 2012.
-- Ridge reaches 0.5833 against a persistence ("yesterday's count") baseline of 0.5099. It beats persistence by 0.07 R² but loses to it on MAE (947.1 vs 840.1 rides).
-- Gradient boosting is negative (-0.4975, MAE 1972.6) because a tree cannot predict counts above the range it saw in 2011, but it still beats the mean baseline by 1.65 R².
-
-So the honest result is that Ridge only narrowly beats persistence, and gradient boosting fails to extrapolate a growing trend. Adding `weather_bad` raised Ridge's validation R² by only 0.0049 (0.6475 to 0.6524), below the 0.01 threshold, and left gradient boosting unchanged, so the feature was not kept.
-
-## Exercise 1
+## Results (Exercise 1)
 
 Tried `weather_bad`, a 0/1 indicator for BAD weather, and dropped it. The validation gain was below the 0.01 threshold.
 
@@ -95,3 +68,6 @@ Persistence baseline, validation: 0.4507 / 900.6.
 
 ## Exercise 5: Ridge vs Persistence
 Ridge is not worth deploying over "yesterday again" because the 0.07 advantage in R2 is driven by outliers (squaring an error weights large errors heavier). Ridge also consistently underestimates in 2011 (about −500 rides/ day). It is a more complex model as well and the pipeline is not worth the improvement. 
+
+## Attribution
+I used the 16 GB ollama model for the first 2 exercises and after exercise 3, used the NRP hosted version of Qwen
