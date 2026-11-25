@@ -58,6 +58,21 @@ def test_persistence_baseline_is_reported():
     assert "baseline_persistence" in MODELS
 
 
+def test_target_transforms_are_off_by_default_and_past_only():
+    """Exercise 4: the committed metrics come from the untransformed target,
+    and any transform anchor is an audited, past-only feature column."""
+    import inspect
+
+    from src.train import TARGET_TRANSFORMS, fit_and_score
+
+    assert inspect.signature(fit_and_score).parameters["transform"].default == "none"
+    assert TARGET_TRANSFORMS["none"] is None
+    feats = build_features(load_raw())
+    safe = set(feature_columns(feats))
+    for name, anchor in TARGET_TRANSFORMS.items():
+        assert anchor is None or anchor in safe, f"{name} anchors on non-feature {anchor!r}"
+
+
 import hashlib
 from pathlib import Path
 RAW_CSV = Path(__file__).resolve().parents[1] / "data" / "raw" / "bike_daily.csv"

@@ -62,12 +62,27 @@ def temporal_split(df: pd.DataFrame):
     return train, valid, test
 
 
-def fit_and_score() -> dict:
+# Exercise 4: optional target transformations, OFF by default. Each maps a
+# name to the past-only "anchor" column subtracted from cnt before fitting
+# and added back to the prediction, so models learn the deviation from a
+# level already known at prediction time instead of the level itself (which
+# grew ~65% from 2011 to 2012, beyond anything a tree saw in training).
+# Baselines are never transformed. The committed reports/metrics.json is
+# always the untransformed pipeline; a transformed run writes its own file.
+TARGET_TRANSFORMS = {"none": None, "diff_roll7": "cnt_roll_7"}
+TRANSFORMED_MODELS = {"ridge", "hgb"}
+
+
+def fit_and_score(transform: str = "none", splits=("valid", "test")) -> dict:
+    anchor = TARGET_TRANSFORMS[transform]
     df = pd.read_parquet(PROCESSED)
     cols = feature_columns(df)
     train, valid, test = temporal_split(df)
+    parts = {"valid": valid, "test": test}
 
-    results = {
+    # The untransformed run must write the exact same metrics.json as before.
+    results = {"target_transform": transform} if anchor else {}
+    results |= {
         "n_features": len(cols),
         "features": cols,
         "n_train": len(train),
@@ -75,19 +90,34 @@ def fit_and_score() -> dict:
         "n_test": len(test),
     }
     for name, model in MODELS.items():
-        model.fit(train[cols], train[TARGET])
-        results[name] = {
-            split: {
-                "r2": round(float(r2_score(part[TARGET], model.predict(part[cols]))), 4),
-                "mae": round(float(mean_absolute_error(part[TARGET], model.predict(part[cols]))), 1),
+        shift = anchor if (anchor and name in TRANSFORMED_MODELS) else None
+        offset = (lambda X: X[shift]) if shift else (lambda X: 0.0)
+        model.fit(train[cols], train[TARGET] - offset(train[cols]))
+        results[name] = {}
+        for split in splits:
+            part = parts[split]
+            pred = model.predict(part[cols]) + offset(part[cols])
+            results[name][split] = {
+                "r2": round(float(r2_score(part[TARGET], pred)), 4),
+                "mae": round(float(mean_absolute_error(part[TARGET], pred)), 1),
             }
-            for split, part in [("valid", valid), ("test", test)]
-        }
     return results
 
 
 if __name__ == "__main__":
-    res = fit_and_score()
-    METRICS.parent.mkdir(parents=True, exist_ok=True)
-    METRICS.write_text(json.dumps(res, indent=2))
+    import argparse
+
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--target-transform", choices=sorted(TARGET_TRANSFORMS), default="none")
+    ap.add_argument("--valid-only", action="store_true",
+                    help="score validation only; use while iterating so test stays untouched")
+    ns = ap.parse_args()
+    splits = ("valid",) if ns.valid_only else ("valid", "test")
+    res = fit_and_score(ns.target_transform, splits)
+    out = METRICS if ns.target_transform == "none" else METRICS.with_name(
+        f"metrics_{ns.target_transform}.json")
+    if ns.valid_only:
+        out = out.with_name(out.stem + "_valid.json")
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(json.dumps(res, indent=2))
     print(json.dumps({k: v for k, v in res.items() if k != "features"}, indent=2))
