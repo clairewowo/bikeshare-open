@@ -77,7 +77,7 @@ Ridge is not worth deploying over "yesterday again". On test it beats persistenc
 
 ## Attribution
 
-Model: qwen3.5:9b via Ollama (built as `bikeshare-coder`, 64k context) for Exercises 1–2. I then switched to Claude Code with Claude Opus 5.5 (hosted) for Exercises 3–5 and the final fixes, because I was running out of time.
+Model: qwen3.5:9b via Ollama (built as `bikeshare-coder`, 64k context) for Exercises 1–2. I then switched to Claude Code with (Opus 5.5) for Exercises 3–5 and the final fixes, because I was running out of time.
 
 **Decisions that were mine** (each has a line in `docs/DECISIONS.md`)
 - Keep the starter's choices on what to predict, what counts as leakage, how to split, and which baselines to report.

@@ -1,8 +1,7 @@
 ### Audit against Teammate's repo
 
-Teammate repo link: 
+Teammate repo link: https://github.com/clairewowo/bikeshare-open/commits/kevin/exercises-1-2/. Note, this is a branch of my own repo because he didn't know we had to make our own repos. I used his latest commit on the kevin/exercises-1-2 branch and cloned it, so it is about the same as cloning a different repo. 
 
-The auditor found nothing that changes a number in Kevin's repo (kevin-bikeshare at adb0f73), and I agree with all of its findings. Nothing was written to your repo or Kevin's; my scratch files are only in /tmp.
 
 What the auditor found
 
